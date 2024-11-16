@@ -5,7 +5,38 @@
 }
 
 .nonogram-grid input {
-    margin: 0;
+    display: none;
+}
+
+.nonogram-grid label {
     width: 2rem;
     height: 2rem;
+    background: #cad3f5;
+    border: 2px solid #24273a;
+    border-radius: 4px;
 }
+
+.nonogram-grid label.checked {
+    background: #f5a97f;
+}
+
+.nonogram-grid label.crossed {
+    /* background: #5b6078; */
+    position: relative;
+}
+
+label.crossed::after {
+    display: flex;
+    content: "✱";
+    color: #5b6078;
+    justify-content: center;
+    align-items: center;
+    width: 100%;
+    height: 100%;
+}
+
+body {
+    background: #24273a;
+    color: #cad3f5;
+}
+

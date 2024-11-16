@@ -1,4 +1,13 @@
 // id ; author_id ; title ; author_name ; is_adult ; column_count ; row_count ; color_count ; colors ; column_cells ; column_colors ; row_cells ; row_colors ;
+/** @typedef { 'none' | 'clicked' | 'rightClicked' } mouseState */
+
+/**
+ * @type {{ mouse: mouseState, selectedCell: Cell? }}
+ */
+let globalState = {
+    'mouse': 'none',
+    'selectedCell': null
+};
 
 class Nonogram {
     id;
@@ -63,44 +72,116 @@ class Nonogram {
     }
 }
 
+/** @typedef { 'none' | 'checked' | 'crossed' } cellState */
+
 class Cell {
     x;
     y;
     checkbox;
+    /**
+     * @type { cellState }
+     */
+    state;
 
     constructor(checkbox) {
         this.x = checkbox.dataset.x;
         this.y = checkbox.dataset.y;
         this.checkbox = checkbox;
+        this.state = 'none';
     }
 
     init() {
-        this.checkbox.addEventListener('click', e => {
-            // e.preventDefault();
-            console.log(this);
+        this.checkbox.addEventListener('mousedown', e => {
+            e.preventDefault();
+            globalState.selectedCell = this;
+
+            if (e.button == 0)
+                this.onLeftClick();
+            else if (e.button == 2)
+                this.onRightClick();
         });
 
-        this.checkbox.addEventListener('contextmenu', e => {
-            e.preventDefault();
+        this.checkbox.addEventListener('contextmenu', e => e.preventDefault());
+
+        this.checkbox.addEventListener('mouseenter', e => {
+            if (this.isSameColumnOrRow(globalState.selectedCell)) {
+                if (globalState.selectedCell.state == this.state)
+                    return;
+
+                if (globalState.mouse == "clicked")
+                    this.onLeftClick();
+                else if (globalState.mouse == "rightClicked")
+                    this.onRightClick();
+            }
         });
+    }
+
+    onLeftClick() {
+        globalState.mouse = 'clicked';
+        if (this.state == 'checked')
+            this.applyState('none');
+        else if (this.state == 'none' || this.state == 'crossed')
+            this.applyState('checked');
+    }
+
+    onRightClick() {
+        globalState.mouse = 'rightClicked';
+        if (this.state == 'crossed')
+            this.applyState('none');
+        else if (this.state == 'none' || this.state == 'checked')
+            this.applyState('crossed');
+    }
+
+    /**
+     * @param { Cell } cell 
+     * @returns { boolean }
+     */
+    isSameColumnOrRow(cell) {
+        return cell && this != cell && (this.x == cell.x || this.y == cell.y);
+    }
+
+    /**
+     * @param { cellState } state 
+     */
+    applyState(state) {
+        switch (state) {
+            case 'none':
+                this.checkbox.classList.remove('checked');
+                this.checkbox.classList.remove('crossed');
+                break;
+
+            case 'checked':
+                this.checkbox.classList.add('checked');
+                this.checkbox.classList.remove('crossed');
+                break;
+
+            case 'crossed':
+                this.checkbox.classList.remove('checked');
+                this.checkbox.classList.add('crossed');
+                break;
+
+            default:
+                break;
+        }
+
+        this.state = state;
     }
 }
 
 const row = "3;;Equilibrium;;;18;18;1;;6;10;3,3;2,2;2,2;1,3,1;2,5,5,2;3,3,5,2;2,2,5,2;2,3,3,2;2,3,3;3,5,4;16;16;14;11;10;6;;6;10;2,1,4;2,1,3;2,1,5;2,1,5;2,2,7;2,12;2,11;2,9;2,3,7;2,5,6;2,5,5;2,5,5;2,3,5;2,5;10;6;;";
 const row2 = "57596;81864;White Dog;Vlan;;5;3;1;;2;;1,1;1;2;;2;1,1;1,1,1;;";
 
-let checkBoxes = document.querySelectorAll('input[name="nonogram"]');
+const n1 = new Nonogram(row2);
 
-let cells = [];
-
-checkBoxes.forEach(checkbox => {
-    let cell = new Cell(checkbox);
-    cell.init();
-    cells.push(cell);
+document.addEventListener('mouseup', e => {
+    globalState.mouse = "none";
+    globalState.selectedCell = null;
 })
 
-const n1 = new Nonogram(row2);
-console.log(n1);
+document.addEventListener('contextMenu', e => {
+    if (globalState.mouse != 'none')
+        e.preventDefault();
+})
 
 /**
  * Build the DOM with specified Nonogram object
@@ -109,24 +190,26 @@ console.log(n1);
  */
 function buildNonogramGrid(nonogram) {
     const gridContainer = document.querySelector('.nonogram-grid');
-    // gridContainer.setAttribute('cols', nonogram.column_count);
     gridContainer.style.setProperty('--cols', nonogram.column_count);
     const cells = [];
 
-    const maxConsecutiveColumns = Math.max(nonogram.column_cells.map(i => i.length))
-    console.log(maxConsecutiveColumns)
+    const maxConsecutiveColumns = Math.max(...nonogram.column_cells.map(i => i.length))
+    const maxConsecutiveRows = Math.max(...nonogram.row_cells.map(i => i.length))
 
     for (let j = 0; j < nonogram.row_count; j++) {
         for (let i = 0; i < nonogram.column_count; i++) {
+            const label = document.createElement('label');
+            label.dataset.x = i;
+            label.dataset.y = j;
             const checkbox = document.createElement('input');
             checkbox.type = 'checkbox';
-            checkbox.dataset.x = i;
-            checkbox.dataset.y = j;
-            const cell = new Cell(checkbox);
+            label.appendChild(checkbox);
+
+            const cell = new Cell(label);
             cell.init();
             cells.push(cell);
 
-            gridContainer.appendChild(checkbox);
+            gridContainer.appendChild(label);
         }
     }
 }
