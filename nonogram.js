@@ -172,6 +172,7 @@ const row = "3;;Equilibrium;;;18;18;1;;6;10;3,3;2,2;2,2;1,3,1;2,5,5,2;3,3,5,2;2,
 const row2 = "57596;81864;White Dog;Vlan;;5;3;1;;2;;1,1;1;2;;2;1,1;1,1,1;;";
 
 const n1 = new Nonogram(row2);
+const n2 = new Nonogram(row);
 
 document.addEventListener('mouseup', e => {
     globalState.mouse = "none";
@@ -190,28 +191,68 @@ document.addEventListener('contextMenu', e => {
  */
 function buildNonogramGrid(nonogram) {
     const gridContainer = document.querySelector('.nonogram-grid');
-    gridContainer.style.setProperty('--cols', nonogram.column_count);
     const cells = [];
 
     const maxConsecutiveColumns = Math.max(...nonogram.column_cells.map(i => i.length))
     const maxConsecutiveRows = Math.max(...nonogram.row_cells.map(i => i.length))
 
-    for (let j = 0; j < nonogram.row_count; j++) {
-        for (let i = 0; i < nonogram.column_count; i++) {
-            const label = document.createElement('label');
-            label.dataset.x = i;
-            label.dataset.y = j;
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            label.appendChild(checkbox);
+    gridContainer.style.setProperty('--cols', nonogram.column_count + maxConsecutiveRows);
 
-            const cell = new Cell(label);
-            cell.init();
-            cells.push(cell);
+    for (let j = 0; j < nonogram.row_count + maxConsecutiveColumns; j++) {
+        for (let i = 0; i < nonogram.column_count + maxConsecutiveRows; i++) {
+            if (j >= maxConsecutiveColumns && i >= maxConsecutiveRows) {
+                let cell = createCell(i, j);
+                cells.push(cell);
+                gridContainer.appendChild(cell.checkbox);
+            }
+            else if (j < maxConsecutiveColumns && i < maxConsecutiveRows) {
+                const blank = document.createElement('div');
+                blank.classList.add('hint');
+                blank.classList.add('blank');
+                gridContainer.appendChild(blank);
+            } else {
+                const hint = document.createElement('div');
+                hint.classList.add('hint');
 
-            gridContainer.appendChild(label);
+                if (i < maxConsecutiveRows) {
+                    // left
+                    const hintValue = nonogram.row_cells[j - maxConsecutiveColumns].at(-(i - maxConsecutiveRows + 1));
+
+                    if (hintValue) {
+                        const hintLabel = document.createElement('span');
+                        hintLabel.textContent = hintValue;
+                        hint.appendChild(hintLabel);
+                    }
+                }
+
+                if (j < maxConsecutiveColumns) {
+                    // top
+                    const hintValue = nonogram.column_cells[i - maxConsecutiveRows].at(-(j - maxConsecutiveColumns + 1));
+
+                    if (hintValue) {
+                        const hintLabel = document.createElement('span');
+                        hintLabel.textContent = hintValue;
+                        hint.appendChild(hintLabel);
+                    }
+                }
+
+                gridContainer.appendChild(hint);
+            }
         }
     }
+}
+
+function createCell(x, y) {
+    const label = document.createElement('label');
+    label.dataset.x = x;
+    label.dataset.y = y;
+    const checkbox = document.createElement('input');
+    checkbox.type = 'checkbox';
+    label.appendChild(checkbox);
+
+    const cell = new Cell(label);
+    cell.init();
+    return cell;
 }
 
 buildNonogramGrid(n1);
